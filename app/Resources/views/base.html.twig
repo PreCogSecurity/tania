@@ -25,6 +25,7 @@
     <![endif]-->
     
     <script type="text/javascript" src="{{ asset('assets/js/jquery.min.js') }}"></script>
+    <script type="text/javascript">window.TANIA_MAPBOX_TOKEN = '{{ env("MAPBOX_ACCESS_TOKEN") }}';</script>
 </head>
 <body>
     {% block body %}{% endblock %}

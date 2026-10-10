@@ -1,16 +1,15 @@
-
-version: '2.2'
+version: '3.8'
 
 services:
-
   app:
-    image: tanibox/tania:latest
     build:
-      dockerfile: docker/app/Dockerfile 
       context: .
+      dockerfile: Dockerfile
+      target: builder
+    image: tania:dev
     environment:
       SYMFONY_LOCALE: en
-      SYMFONY_SECRET: AugIVKlefKLzqJwlwY5S5YaW8Ui66fi8
+      SYMFONY_SECRET: dev-secret-change-in-production
       SYMFONY_ENV: dev
       SYMFONY_DB_HOST: db
       SYMFONY_DB_PORT: 3306
@@ -18,19 +17,47 @@ services:
       SYMFONY_DB_USERNAME: tania
       SYMFONY_DB_PASSWORD: taniapass
       SYMFONY_MAILER_TRANSPORT: smtp
-      SYMFONY_MAILER_HOST: 127.0.0.1
+      SYMFONY_MAILER_HOST: mailhog
       SYMFONY_MAILER_USERNAME: admin
       SYMFONY_MAILER_PASSWORD: admin
-      SYMFONY_MAILER_FROM_ADDRESS: youremail@yourdomain.com
-      SYMFONY_MAILER_SENDER_NAME: yourname
+      SYMFONY_MAILER_FROM_ADDRESS: dev@tania.local
+      SYMFONY_MAILER_SENDER_NAME: Tania Dev
+      MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-}
       COMPOSER_ALLOW_SUPERUSER: 1
     ports:
-      - "80:80"
+      - "8080:8080"
     volumes:
-      - '.:/var/www'
-      - '$HOME/.composer:/var/www/.composer' 
+      - '.:/app:cached'
+      - '$HOME/.composer:/root/.composer:cached'
+    depends_on:
+      db:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    command: >
+      sh -c "
+        composer install --no-interaction --prefer-dist &&
+        php bin/console doctrine:migrations:migrate --no-interaction &&
+        php-fpm
+      "
+
+  app-nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: tania:dev-nginx
+    ports:
+      - "8080:8080"
+    volumes:
+      - '.:/app:cached'
+    depends_on:
+      - app
+    environment:
+      SYMFONY_ENV: dev
+
   db:
-    image: 'mysql:5.6'
+    image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: tania
@@ -38,3 +65,20 @@ services:
       MYSQL_PASSWORD: taniapass
     ports:
       - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+
+volumes:
+  db_data:

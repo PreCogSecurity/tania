@@ -3,13 +3,14 @@
         var fieldMap, markerLayer;
         var currentLatLng = [$('#map').data('lat'), $('#map').data('lng')];
         var defaultLatLng = [-8.4960936, 115.2485298];
+        var mapboxToken = $('#map').data('mapbox-token') || window.TANIA_MAPBOX_TOKEN;
         
         /* Initialize the map and tile layer */
         function mapInit(latLng) {
             fieldMap = L.map('map').setView(latLng, 13);
             markerLayer = L.marker(latLng).addTo(fieldMap);
 
-            L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+            L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=' + mapboxToken, {
                 maxZoom: 18,
                 attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
                     '<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +

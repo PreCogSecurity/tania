@@ -1,0 +1,20 @@
+{
+  "name": "tania",
+  "version": "1.0.0",
+  "description": "Free and open source farming management system",
+  "license": "Apache-2.0",
+  "private": true,
+  "scripts": {
+    "lint:js": "eslint web/assets/js --ext .js --ignore-pattern 'web/assets/js/jquery*.js' --ignore-pattern 'web/assets/js/bootstrap*.js' --ignore-pattern 'web/assets/js/paho-mqtt.js' --ignore-pattern 'web/assets/js/perfect-scrollbar/**' --ignore-pattern 'web/assets/js/jquery-ui/**'",
+    "lint:js:fix": "eslint web/assets/js --ext .js --ignore-pattern 'web/assets/js/jquery*.js' --ignore-pattern 'web/assets/js/bootstrap*.js' --ignore-pattern 'web/assets/js/paho-mqtt.js' --ignore-pattern 'web/assets/js/perfect-scrollbar/**' --ignore-pattern 'web/assets/js/jquery-ui/**' --fix",
+    "test": "echo \"No JavaScript tests configured\" && exit 0"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "eslint-config-airbnb-base": "^15.0.0",
+    "eslint-plugin-import": "^2.29.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
