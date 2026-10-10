@@ -1,84 +1,261 @@
-# End Official Support and Maintenance for Tania PHP
-
-As the rewrite of Tania from PHP to Go is completed, and we have released the new Tania project to the public repository. The support for Tania PHP is ended. Please, check the new project at [tania-core](https://github.com/Tanibox/tania-core).
+# Tania - Farm Management System
 
 ![Tania](readme-assets/project-logo.png "Tania Logo")
 
-[![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/taniafarm/Lobby)
-[![Build Status](https://travis-ci.org/Tanibox/tania.svg?branch=development)](https://travis-ci.org/Tanibox/tania)
+[![Build Status](https://github.com/PreCogSecurity/tania/actions/workflows/ci.yml/badge.svg)](https://github.com/PreCogSecurity/tania/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![PHP Version](https://img.shields.io/badge/PHP-%3E%3D7.1-8892BF.svg)](https://php.net/)
 
 Tania is a free and open source farming management system for everyone. You can manage your growing areas, reservoirs, farm tasks, inventories, and the crop growing progress.
 
-It is developed on top of Symfony PHP web framework.
+It is developed on top of the Symfony PHP web framework.
 
-To get the stable release, you can checkout to the `master` branch or from the [release tab](https://github.com/Tanibox/tania/releases).
+## Architecture Overview
 
-## Screenshots
+Tania follows a standard Symfony 3.4+ MVC architecture with the following components:
 
-![Tania Dashboard](https://s3-ap-southeast-1.amazonaws.com/asepco/iot-dashboard.PNG "Tania Dashboard")
+### Backend (PHP/Symfony)
+- **Framework**: Symfony 3.3 LTS (planned upgrade to 4.4/5.4 LTS)
+- **ORM**: Doctrine ORM 2.5+ with Doctrine Migrations
+- **Authentication**: FOSUserBundle with bcrypt password hashing
+- **Forms**: Symfony Form component with validation
+- **Templating**: Twig
+- **File Uploads**: VichUploaderBundle
+- **Logging**: Monolog with configurable handlers
+
+### Frontend
+- **CSS Framework**: Bootstrap 3.3.7 with custom theme
+- **JavaScript**: jQuery 3.1.1, Leaflet 1.1.0 for maps
+- **MQTT Client**: Paho MQTT JavaScript client for IoT device communication
+- **Charts**: Custom dashboard widgets
+
+### Database
+- **Primary**: MySQL 5.6+ / MariaDB 10.1+
+- **Schema**: Managed via Doctrine Migrations
+
+### Infrastructure
+- **Containerization**: Docker with multi-stage build (PHP-FPM + Nginx)
+- **Orchestration**: Docker Compose for development, Kubernetes-ready
+- **CI/CD**: GitHub Actions with PHP linting, static analysis, security audit, and tests
+- **Monitoring**: Health check endpoint at `/health`
 
 ## Requirements
 
-- PHP >= 7.0
-- MySQL >= 5.6
-- Composer (you can install from [getcomposer.org](http://getcomposer.org))
+- PHP >= 7.1 (7.4+ recommended)
+- MySQL >= 5.6 or MariaDB >= 10.1
+- Composer (install from [getcomposer.org](https://getcomposer.org))
+- Node.js >= 18 (for frontend asset building)
+- Docker (optional, for containerized deployment)
 
-## General installation steps
+## Installation
 
-First, clone this project:
+### Traditional Installation
 
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/PreCogSecurity/tania.git
+   cd tania
+   ```
+
+2. Configure environment:
+   ```bash
+   cp .env-example .env
+   # Edit .env with your database and mailer credentials
+   ```
+
+3. Install PHP dependencies:
+   ```bash
+   composer install --no-dev --optimize-autoloader
+   ```
+
+4. Install and build frontend assets:
+   ```bash
+   npm ci
+   npm run build
+   ```
+
+5. Set up the database:
+   ```bash
+   php bin/console doctrine:migrations:migrate --no-interaction
+   ```
+
+6. Create an admin user:
+   ```bash
+   php bin/console fos:user:create admin admin@example.com securepassword --super-admin
+   ```
+
+7. Run the development server:
+   ```bash
+   php bin/console server:run
+   ```
+
+   Tania will run on `http://localhost:8000`.
+
+### Docker Installation (Recommended for Production)
+
+1. Clone and configure:
+   ```bash
+   git clone https://github.com/PreCogSecurity/tania.git
+   cd tania
+   cp .env-example .env
+   # Edit .env with your configuration
+   ```
+
+2. Build and start:
+   ```bash
+   docker-compose up -d --build
+   ```
+
+3. Run migrations:
+   ```bash
+   docker-compose exec app php bin/console doctrine:migrations:migrate --no-interaction
+   ```
+
+4. Create admin user:
+   ```bash
+   docker-compose exec app php bin/console fos:user:create admin admin@example.com securepassword --super-admin
+   ```
+
+   Tania will be available at `http://localhost:8080`.
+
+## Configuration
+
+All configuration is managed through environment variables in `.env`. See `.env-example` for all available options.
+
+### Key Configuration Options
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SYMFONY_ENV` | Environment (dev/prod/test) | `dev` |
+| `SYMFONY_SECRET` | Secret key for CSRF, encryption | **Required** |
+| `SYMFONY_DB_HOST` | Database host | `127.0.0.1` |
+| `SYMFONY_DB_PORT` | Database port | `3306` |
+| `SYMFONY_DB_NAME` | Database name | **Required** |
+| `SYMFONY_DB_USERNAME` | Database username | **Required** |
+| `SYMFONY_DB_PASSWORD` | Database password | **Required** |
+| `MAPBOX_ACCESS_TOKEN` | Mapbox token for map tiles | **Required for maps** |
+| `SYMFONY_MAILER_*` | Mailer configuration | See `.env-example` |
+
+### Security Recommendations
+
+1. **Always use a strong `SYMFONY_SECRET`** in production (generate with `openssl rand -hex 32`)
+2. **Use environment-specific `.env` files** (`.env.prod`, `.env.local`)
+3. **Enable HTTPS** in production via reverse proxy (Nginx/Traefik)
+4. **Restrict database access** to application servers only
+5. **Rotate credentials regularly** and use secrets management in production
+
+## Development
+
+### Code Quality Tools
+
+```bash
+# PHP linting (PSR-12)
+vendor/bin/phpcs --standard=phpcs.xml src
+
+# PHP static analysis
+vendor/bin/phpstan analyse --configuration=phpstan.neon
+
+# JavaScript linting
+npm run lint:js
+
+# Auto-fix JavaScript issues
+npm run lint:js:fix
 ```
-git clone git@github.com:Tanibox/tania.git
-cd tania
+
+### Running Tests
+
+```bash
+# PHP unit tests
+vendor/bin/phpunit --configuration phpunit.xml.dist
+
+# With coverage
+vendor/bin/phpunit --coverage-html coverage
 ```
 
-Second, setup your database and mailer parameters in `/.env`. You can duplicate and rename the `/.env-example` file.
+### Database Migrations
 
-Third, setup the web application:
+```bash
+# Generate new migration
+php bin/console doctrine:migrations:generate
 
-```
-curl -sS https://getcomposer.org/installer | php
-php composer.phar install
-```
+# Run migrations
+php bin/console doctrine:migrations:migrate
 
-Fourth, setup the database tables:
-
-```
-php bin/console --no-interaction doctrine:migrations:migrate
+# Rollback last migration
+php bin/console doctrine:migrations:migrate prev
 ```
 
-Fifth, create user:
+## API & IoT Integration
 
+Tania supports IoT device integration via MQTT:
+
+- **MQTT Broker**: Configure host/port in settings
+- **Device Topics**: `tania/{resource_id}` for sensor data
+- **Dashboard**: Real-time sensor visualization on dashboard
+
+## Deployment
+
+### Production Checklist
+
+- [ ] Set `SYMFONY_ENV=prod`
+- [ ] Generate strong `SYMFONY_SECRET`
+- [ ] Configure production database credentials
+- [ ] Set up HTTPS/TLS termination
+- [ ] Configure mail delivery (SMTP)
+- [ ] Set up log aggregation
+- [ ] Configure backup strategy for database
+- [ ] Set up monitoring/alerting on `/health` endpoint
+- [ ] Run `composer install --no-dev --optimize-autoloader`
+- [ ] Clear and warm cache: `php bin/console cache:clear --env=prod`
+
+### Docker Production Deployment
+
+```bash
+# Build production image
+docker build -t tania:latest .
+
+# Run with docker-compose (production override)
+docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
-php bin/console fos:user:create {{user}} {{email}} {{password}}
-```
 
-The last, you can run Tania in development mode (on your PC or laptop) by using this command:
+## Contributing
 
-```
-php bin/console server:run
-``` 
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Run code quality checks (`vendor/bin/phpcs`, `vendor/bin/phpstan`, `npm run lint:js`)
+4. Write tests for new functionality
+5. Commit your changes (`git commit -m 'Add amazing feature'`)
+6. Push to the branch (`git push origin feature/amazing-feature`)
+7. Open a Pull Request
 
-Tania will run on `http://localhost:8000`.
+### Coding Standards
 
-You can also run Tania in production mode (on your server) by referring to this [Symfony documentation](http://symfony.com/doc/current/setup/web_server_configuration.html).
+- PHP: PSR-12 (enforced via PHP_CodeSniffer)
+- PHP: PHPStan Level 5 static analysis
+- JavaScript: Airbnb Base (enforced via ESLint)
+- Git: Conventional Commits
 
-Done! You can start to use Tania.
+## Security
 
-## Questions and issues
+If you discover a security vulnerability, please report it privately to **security@precogsecurity.com**. Do not open public issues for security vulnerabilities.
 
-You can use [our JIRA issue tracker](https://gettania.atlassian.net) for bug reporting, feature request, and general feedback.
+### Supported Versions
 
-## Maintainers
-
-Current maintainers:
-
-- Asep Bagja Priandana - [Linkedin](https://www.linkedin.com/in/asepbagja/)
-- Retno Ika Safitri - [Linkedin](https://www.linkedin.com/in/retnoika/)
-- Didiet Noor - [Linkedin](https://www.linkedin.com/in/didiet/)
-
-If you are interested in being a core contributor to this project, please drop me an email at __asep@tanibox.com__.
+| Version | Supported |
+|---------|-----------|
+| 1.x     | ✅ Active |
+| < 1.0   | ❌ End of Life |
 
 ## License
 
-Tania is available under Apache 2.0 open source license.
+Tania is available under the Apache 2.0 open source license. See [LICENSE](LICENSE) for details.
+
+## Maintainers
+
+- PreCog Security Team - [GitHub](https://github.com/PreCogSecurity)
+
+## Acknowledgments
+
+- Original Tania project by [Tanibox](https://github.com/Tanibox)
+- Symfony Framework
+- All open source contributors

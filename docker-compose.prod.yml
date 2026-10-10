@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    image: tania:prod
+    environment:
+      SYMFONY_LOCALE: ${SYMFONY_LOCALE:-en}
+      SYMFONY_SECRET: ${SYMFONY_SECRET}
+      SYMFONY_ENV: prod
+      SYMFONY_DB_HOST: ${SYMFONY_DB_HOST:-db}
+      SYMFONY_DB_PORT: ${SYMFONY_DB_PORT:-3306}
+      SYMFONY_DB_NAME: ${SYMFONY_DB_NAME}
+      SYMFONY_DB_USERNAME: ${SYMFONY_DB_USERNAME}
+      SYMFONY_DB_PASSWORD: ${SYMFONY_DB_PASSWORD}
+      SYMFONY_MAILER_TRANSPORT: ${SYMFONY_MAILER_TRANSPORT:-smtp}
+      SYMFONY_MAILER_HOST: ${SYMFONY_MAILER_HOST}
+      SYMFONY_MAILER_USERNAME: ${SYMFONY_MAILER_USERNAME}
+      SYMFONY_MAILER_PASSWORD: ${SYMFONY_MAILER_PASSWORD}
+      SYMFONY_MAILER_FROM_ADDRESS: ${SYMFONY_MAILER_FROM_ADDRESS}
+      SYMFONY_MAILER_SENDER_NAME: ${SYMFONY_MAILER_SENDER_NAME}
+      MAPBOX_ACCESS_TOKEN: ${MAPBOX_ACCESS_TOKEN:-}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${SYMFONY_DB_NAME}
+      MYSQL_USER: ${SYMFONY_DB_USERNAME}
+      MYSQL_PASSWORD: ${SYMFONY_DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  db_data:

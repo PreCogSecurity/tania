@@ -1,16 +1,123 @@
 name: CI
+
 on:
   push:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+
 jobs:
-  test:
+  php-lint:
+    name: PHP Lint (PHP_CodeSniffer)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_mysql, dom, filter, gd, iconv, json, mbstring, tokenizer
+          coverage: none
+      - name: Install Composer dependencies
+        run: composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader
+      - name: Run PHP_CodeSniffer
+        run: vendor/bin/phpcs --standard=phpcs.xml src
+
+  php-static-analysis:
+    name: PHP Static Analysis (PHPStan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_mysql, dom, filter, gd, iconv, json, mbstring, tokenizer
+          coverage: none
+      - name: Install Composer dependencies
+        run: composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse --configuration=phpstan.neon --memory-limit=512M
+
+  php-security-audit:
+    name: PHP Security Audit (Composer Audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_mysql, dom, filter, gd, iconv, json, mbstring, tokenizer
+          coverage: none
+      - name: Install Composer dependencies
+        run: composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader
+      - name: Run Composer Audit
+        run: composer audit --no-dev --format=plain
+
+  php-tests:
+    name: PHP Tests (PHPUnit)
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: tania_test
+          MYSQL_USER: tania
+          MYSQL_PASSWORD: tania
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo, pdo_mysql, dom, filter, gd, iconv, json, mbstring, tokenizer
+          coverage: xdebug
+      - name: Install Composer dependencies
+        run: composer install --no-progress --no-interaction --prefer-dist --optimize-autoloader
+      - name: Prepare test environment
+        run: |
+          cp .env-example .env
+          sed -i 's/SYMFONY_DB_HOST=127.0.0.1/SYMFONY_DB_HOST=127.0.0.1/' .env
+          sed -i 's/SYMFONY_DB_PORT=3306/SYMFONY_DB_PORT=3306/' .env
+          sed -i 's/SYMFONY_DB_NAME=yourdatabasename/SYMFONY_DB_NAME=tania_test/' .env
+          sed -i 's/SYMFONY_DB_USERNAME=yourdatabaseusername/SYMFONY_DB_USERNAME=tania/' .env
+          sed -i 's/SYMFONY_DB_PASSWORD=yourdatabasepassword/SYMFONY_DB_PASSWORD=tania/' .env
+          sed -i 's/SYMFONY_SECRET=changewithyoursecretkey/SYMFONY_SECRET=testsecretkey/' .env
+      - name: Run database migrations
+        run: php bin/console doctrine:migrations:migrate --no-interaction --env=test
+      - name: Run PHPUnit
+        run: vendor/bin/phpunit --configuration phpunit.xml.dist
+
+  js-lint:
+    name: JavaScript Lint (ESLint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
           cache: 'npm'
-      - run: npm ci
-      - run: npm test
+      - name: Install npm dependencies
+        run: npm ci
+      - name: Run ESLint
+        run: npm run lint:js
+
+  docker-build:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    needs: [php-lint, php-static-analysis, php-security-audit, php-tests, js-lint]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t tania:test .
+      - name: Test Docker image
+        run: |
+          docker run --rm tania:test php -v
+          docker run --rm tania:test composer --version

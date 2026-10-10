@@ -1,0 +1,15 @@
+includes:
+    - vendor/phpstan/phpstan-symfony/extension.neon
+    - vendor/phpstan/phpstan-doctrine/extension.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
+    excludePaths:
+        - src/AppBundle/DataFixtures
+        - src/AppBundle/DoctrineExtensions
+    ignoreErrors:
+        - '#Parameter \$request of method.*has no type hint#'
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false
